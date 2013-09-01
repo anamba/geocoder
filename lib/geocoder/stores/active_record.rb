@@ -168,7 +168,11 @@ module Geocoder::Store
           options[:bearing] = Geocoder.config.distances
         end
         if options[:bearing]
-          method_prefix = using_sqlite? ? "approx" : "full"
+          method_prefix = case
+            when using_sqlite? then "approx"
+            when using_mssql? then "full_mssql"
+            else "full"
+          end
           Geocoder::Sql.send(
             method_prefix + "_bearing",
             latitude, longitude,
@@ -218,11 +222,19 @@ module Geocoder::Store
         connection.adapter_name.match /sqlite/i
       end
 
+      def using_mssql?
+        connection.adapter_name.match /sqlserver/i
+      end
+
       ##
       # Value which can be passed to where() to produce no results.
       #
       def false_condition
-        using_sqlite? ? 0 : "false"
+        case
+          when using_sqlite? then 0
+          when using_mssql? then '0=1'
+          else "false"
+        end
       end
 
       ##

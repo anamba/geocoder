@@ -86,6 +86,31 @@ module Geocoder
       end
     end
 
+    # Special version for SQL Server (ATAN2 => ATN2)
+    def full_mssql_bearing(latitude, longitude, lat_attr, lon_attr, options = {})
+      case options[:bearing] || Geocoder.config.distances
+      when :linear
+        "CAST(" +
+          "DEGREES(ATN2( " +
+            "RADIANS(#{lon_attr} - #{longitude.to_f}), " +
+            "RADIANS(#{lat_attr} - #{latitude.to_f})" +
+          ")) + 360 " +
+        "AS decimal) % 360"
+      when :spherical
+        "CAST(" +
+          "DEGREES(ATN2( " +
+            "SIN(RADIANS(#{lon_attr} - #{longitude.to_f})) * " +
+            "COS(RADIANS(#{lat_attr})), (" +
+              "COS(RADIANS(#{latitude.to_f})) * SIN(RADIANS(#{lat_attr}))" +
+            ") - (" +
+              "SIN(RADIANS(#{latitude.to_f})) * COS(RADIANS(#{lat_attr})) * " +
+              "COS(RADIANS(#{lon_attr} - #{longitude.to_f}))" +
+            ")" +
+          ")) + 360 " +
+        "AS decimal) % 360"
+      end
+    end
+
     ##
     # Totally lame bearing calculation. Basically useless except that it
     # returns *something* in databases without trig functions.
